@@ -11,4 +11,4 @@ add_library(ugrad include/engine.hpp src/engine.cpp)
 target_include_directories(ugrad PUBLIC include)
 
 add_subdirectory(examples)
-
+add_subdirectory(tests)
