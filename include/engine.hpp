@@ -21,25 +21,7 @@ class Value {
   void children(const vector<Value>& children) { _children = children; }
   Value relu() { return {std::max(0.0, _data), _children}; }
 
-  Value operator+=(const Value& rhs) {
-    this->_data += rhs._data;
-    return *this;
-  }
-
-  Value operator-=(const Value& rhs) {
-    this->_data -= rhs._data;
-    return *this;
-  }
-
-  Value operator*=(const Value& rhs) {
-    this->_data *= rhs._data;
-    return *this;
-  }
-
-  Value operator/=(const Value& rhs) {
-    this->_data /= rhs._data;
-    return *this;
-  }
+  void backward() {}
 
   friend ostream& operator<<(ostream& os, const Value& val) {
     os << "Value(data=" << val._data << ", grad=" << val._grad << ")";
@@ -57,17 +39,17 @@ inline Value operator+(const Value& lhs, const Value& rhs) {
   return out;
 }
 
-inline Value operator-(Value lhs, const Value& rhs) {
+inline Value operator-(const Value& lhs, const Value& rhs) {
   auto out = Value(lhs.data() - rhs.data(), {lhs, rhs});
   return out;
 }
 
-inline Value operator*(Value lhs, const Value& rhs) {
+inline Value operator*(const Value& lhs, const Value& rhs) {
   auto out = Value(lhs.data() * rhs.data(), {lhs, rhs});
   return out;
 }
 
-inline Value operator/(Value lhs, const Value& rhs) {
+inline Value operator/(const Value& lhs, const Value& rhs) {
   auto out = Value(lhs.data() / rhs.data(), {lhs, rhs});
   return out;
 }
@@ -75,5 +57,26 @@ inline Value operator/(Value lhs, const Value& rhs) {
 inline Value operator-(const Value& rhs) {
   return {-rhs.data(), rhs.children()};
 }
+
+inline Value& operator+=(Value& lhs, const Value& rhs) {
+  lhs = lhs + rhs;
+  return lhs;
+}
+
+inline Value& operator-=(Value& lhs, const Value& rhs) {
+  lhs = lhs - rhs;
+  return lhs;
+}
+
+inline Value& operator*=(Value& lhs, const Value& rhs) {
+  lhs = lhs * rhs;
+  return lhs;
+}
+
+inline Value& operator/=(Value& lhs, const Value& rhs) {
+  lhs = lhs / rhs;
+  return lhs;
+}
+
 }  // namespace ugrad
 #endif  // __UGRAD_ENGINE_HPP__
