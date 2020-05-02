@@ -1,7 +1,9 @@
-#include "gtest/gtest.h"
 #include "engine.hpp"
+#include <vector>
+#include "gtest/gtest.h"
 
 using ugrad::Value;
+using std::vector;
 
 TEST(ValueTest, Add) {
   auto a = Value{-1.0};
@@ -53,4 +55,43 @@ TEST(ValueTest, SelfAddNest) {
   EXPECT_EQ(c.children()[1].data(), 2.0);
   EXPECT_EQ(c.children()[0].children()[0].data(), a.data());
   EXPECT_EQ(c.children()[0].children()[1].data(), b.data());
+}
+
+TEST(ValueTest, TopoSortEasy) {
+  auto a = Value{-1.0};
+  auto b = Value{1.0};
+  auto c = a + b;
+  auto topo_order = c.build_topo();
+
+  ASSERT_FALSE(topo_order.empty());
+  ASSERT_EQ(topo_order.size(), 3);
+  EXPECT_EQ(topo_order[0].data(), 0);   // c
+  EXPECT_EQ(topo_order[1].data(), 1);   // b
+  EXPECT_EQ(topo_order[2].data(), -1);  // a
+
+  topo_order = c.build_topo();
+
+  ASSERT_FALSE(topo_order.empty());
+  ASSERT_EQ(topo_order.size(), 3);
+  EXPECT_EQ(topo_order[0].data(), 0);  // c
+  EXPECT_EQ(topo_order[1].data(), 1);  // b
+  EXPECT_EQ(topo_order[2].data(), -1); // a
+}
+
+TEST(ValueTest, TopoSortEasy1) {
+  auto a = Value{-1.0};
+  auto b = Value{1.0};
+  auto c = a + b;  // c'
+  c += b;
+
+  auto topo_order = c.build_topo();
+
+  ASSERT_FALSE(topo_order.empty());
+  ASSERT_EQ(topo_order.size(), 5);
+
+  EXPECT_EQ(topo_order[0].data(), 1);  // c
+  EXPECT_EQ(topo_order[1].data(), 1);  // b
+  EXPECT_EQ(topo_order[2].data(), 0);  // c'
+  EXPECT_EQ(topo_order[3].data(), 1);  // b
+  EXPECT_EQ(topo_order[4].data(), -1); // a
 }

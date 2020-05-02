@@ -19,9 +19,24 @@ class Value {
   double grad() const { return _grad; }
   const vector<Value>& children() const { return _children; }
   void children(const vector<Value>& children) { _children = children; }
+  bool visited() { return _vis; }
+  void visited(bool status) { _vis = status; }
   Value relu() { return {std::max(0.0, _data), _children}; }
 
-  void backward() {}
+  void backward() {
+    _grad = 1.0;
+    auto topo_order = build_topo();
+    for (auto val: topo_order) {
+      val.backward();
+    }
+  }
+
+  vector<Value> build_topo() {
+    vector<Value> topo_order;
+    visited(false);
+    build_topo(topo_order);
+    return topo_order;
+  }
 
   friend ostream& operator<<(ostream& os, const Value& val) {
     os << "Value(data=" << val._data << ", grad=" << val._grad << ")";
@@ -29,9 +44,14 @@ class Value {
   }
 
  private:
+  void build_topo(Value& val, vector<Value>& topo_order);
+  void build_topo(vector<Value>& topo_order) { build_topo(*this, topo_order); }
+
+ private:
   double _data;
   double _grad;
   vector<Value> _children;
+  bool _vis;
 };
 
 inline Value operator+(const Value& lhs, const Value& rhs) {
