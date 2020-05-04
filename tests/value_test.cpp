@@ -1,11 +1,12 @@
-#include "engine.hpp"
-#include <vector>
 #include <memory>
+#include <vector>
+
+#include "engine.hpp"
 #include "gtest/gtest.h"
 
-using ugrad::Value;
-using std::vector;
 using std::make_shared;
+using std::vector;
+using ugrad::Value;
 
 TEST(ValueTest, Add) {
   auto a = make_shared<Value>(-1.0);
@@ -86,9 +87,9 @@ TEST(ValueTest, TopoSortEasy) {
 
   ASSERT_FALSE(topo_order.empty());
   ASSERT_EQ(topo_order.size(), 3);
-  EXPECT_EQ(topo_order[0]->data(), 0);  // c
-  EXPECT_EQ(topo_order[1]->data(), 1);  // b
-  EXPECT_EQ(topo_order[2]->data(), -1); // a
+  EXPECT_EQ(topo_order[0]->data(), 0);   // c
+  EXPECT_EQ(topo_order[1]->data(), 1);   // b
+  EXPECT_EQ(topo_order[2]->data(), -1);  // a
 }
 
 TEST(ValueTest, TopoSortEasy1) {
@@ -96,17 +97,17 @@ TEST(ValueTest, TopoSortEasy1) {
   auto b = make_shared<Value>(1.0);
   auto c = a + b;  // c'
 
-  c = c + b; // c
+  c = c + b;  // c
 
   auto topo_order = c->build_topo();
 
   ASSERT_FALSE(topo_order.empty());
   ASSERT_EQ(topo_order.size(), 4);
 
-  EXPECT_EQ(topo_order[0]->data(), 1);  // c
-  EXPECT_EQ(topo_order[1]->data(), 0);  // c'
-  EXPECT_EQ(topo_order[2]->data(), 1);  // b
-  EXPECT_EQ(topo_order[3]->data(), -1); // a
+  EXPECT_EQ(topo_order[0]->data(), 1);   // c
+  EXPECT_EQ(topo_order[1]->data(), 0);   // c'
+  EXPECT_EQ(topo_order[2]->data(), 1);   // b
+  EXPECT_EQ(topo_order[3]->data(), -1);  // a
 }
 
 TEST(GradTest, Single) {
@@ -148,7 +149,7 @@ TEST(GradTest, UseMultipleTimes) {
   auto a = make_shared<Value>(-4.0f);
   auto b = make_shared<Value>(2.0f);
   auto c = a * b;
-  c = c * b; // c = a * (b*b)
+  c = c * b;  // c = a * (b*b)
   c->backward();
   EXPECT_EQ(a->grad(), 4.0);
   EXPECT_EQ(b->grad(), -16.0);
@@ -159,7 +160,7 @@ TEST(GradTest, ReluPos) {
   auto a = make_shared<Value>(4.0f);
   auto b = make_shared<Value>(2.0f);
   auto c = a * b;
-  c = c->relu() * b; // c = relu(a*b) * b
+  c = c->relu() * b;  // c = relu(a*b) * b
   c->backward();
   EXPECT_EQ(a->grad(), 4.0);
   EXPECT_EQ(b->grad(), 16.0);
@@ -170,7 +171,7 @@ TEST(GradTest, ReluNeg) {
   auto a = make_shared<Value>(-4.0f);
   auto b = make_shared<Value>(2.0f);
   auto c = a * b;
-  c = c->relu() * b; // c = relu(a*b) * b
+  c = c->relu() * b;  // c = relu(a*b) * b
   c->backward();
   EXPECT_EQ(a->grad(), 0.0);
   EXPECT_EQ(b->grad(), 0.0);

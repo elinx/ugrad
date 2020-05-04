@@ -2,11 +2,11 @@
 #define __UGRAD_ENGINE_HPP__
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <memory>
 #include <ostream>
 #include <vector>
-#include <cmath>
 
 namespace ugrad {
 
@@ -20,8 +20,15 @@ using ValuePtr = shared_ptr<Value>;
 
 struct Value : public std::enable_shared_from_this<Value> {
  public:
-  Value(double data);
-  Value(double data, vector<ValuePtr> children);
+  Value(double data)
+      : _data(data), _grad(0.0f), _vis{false}, _backward{[]() {}} {}
+
+  Value(double data, vector<ValuePtr> children)
+      : _data(data),
+        _grad(0.0f),
+        _children{children},
+        _vis{false},
+        _backward{[]() {}} {}
 
   double data() const { return _data; }
   double grad() const { return _grad; }
@@ -43,7 +50,8 @@ struct Value : public std::enable_shared_from_this<Value> {
     auto out = make_shared<Value>(std::pow(_data, rhs->_data),
                                   vector<ValuePtr>{shared_from_this()});
     out->_backward = [out, self = shared_from_this(), rhs]() {
-      self->_grad += rhs->_data * std::pow(self->_data, rhs->_data - 1) * out->_grad;
+      self->_grad +=
+          rhs->_data * std::pow(self->_data, rhs->_data - 1) * out->_grad;
     };
     return out;
   }
@@ -63,16 +71,30 @@ struct Value : public std::enable_shared_from_this<Value> {
     return topo_order;
   }
 
+  void build_topo(ValuePtr val, vector<ValuePtr>& topo_order) {
+    if (!val->visited()) {
+      val->visited(true);
+      for (auto child : val->children()) {
+        build_topo(child, topo_order);
+      }
+      topo_order.insert(topo_order.begin(), val);
+    }
+  }
+
+  void build_topo(vector<ValuePtr>& topo_order) {
+    build_topo(shared_from_this(), topo_order);
+  }
+
+  void clear_visit_mark(vector<ValuePtr>& topo_order) {
+    for (auto& val : topo_order) {
+      val->_vis = false;
+    }
+  }
+
   friend ostream& operator<<(ostream& os, const Value& val) {
     os << "Value(data=" << val._data << ", grad=" << val._grad << ")";
     return os;
   }
-
-  void build_topo(ValuePtr val, vector<ValuePtr>& topo_order);
-  void build_topo(vector<ValuePtr>& topo_order) {
-    build_topo(shared_from_this(), topo_order);
-  }
-  void clear_visit_mark(vector<ValuePtr>& topo_order);
 
   double _data;
   bool _vis;
@@ -108,13 +130,6 @@ inline ValuePtr operator-(ValuePtr rhs) {
 inline ValuePtr operator-(ValuePtr lhs, ValuePtr rhs) { return lhs + (-rhs); }
 
 inline ValuePtr operator/(ValuePtr lhs, ValuePtr rhs) {
-  // auto out =
-  //     make_shared<Value>(lhs->data() / rhs->data(), vector<ValuePtr>{lhs, rhs});
-  // out->_backward = [out, lhs, rhs]() {
-  //   lhs->_grad += (1.0 / rhs->data()) * out->_grad;
-  //   rhs->_grad += -1.0 * lhs->data() / (rhs->data() * rhs->data()) * out->_grad;
-  // };
-  // return out;
   return lhs * rhs->pow(make_shared<Value>(-1));
 }
 

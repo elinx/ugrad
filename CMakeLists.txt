@@ -10,8 +10,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(dependency)
 
-add_library(ugrad include/engine.hpp src/engine.cpp)
+add_library(ugrad include/engine.hpp)
 target_include_directories(ugrad PUBLIC include)
+set_target_properties(ugrad PROPERTIES LINKER_LANGUAGE CXX)
 
 add_subdirectory(examples)
 add_subdirectory(tests)
