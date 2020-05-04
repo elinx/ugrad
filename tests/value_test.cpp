@@ -28,15 +28,14 @@ TEST(ValueTest, AddChildren) {
   auto a = Value{-1.0};
   auto b = Value{1.0};
   auto c = a + b;
-  EXPECT_EQ(c.children()[0].data(), a.data());
-  EXPECT_EQ(c.children()[1].data(), b.data());
+  EXPECT_EQ(c.children()[0].get().data(), a.data());
+  EXPECT_EQ(c.children()[1].get().data(), b.data());
 }
 
 TEST(ValueTest, SelfAddChildren) {
   auto a = Value{-1.0};
   a += -2;
-  EXPECT_EQ(a.children()[0].data(), -1.0);
-  EXPECT_EQ(a.children()[1].data(), -2.0);
+  ASSERT_EQ(a.children().size(), 0);
 }
 
 TEST(ValueTest, SelfAddChildrenAddr) {
@@ -51,10 +50,16 @@ TEST(ValueTest, SelfAddNest) {
   auto b = Value{1.0};
   auto c = a + b;
   c += 2.0;
-  EXPECT_EQ(c.children()[0].data(), 0.0);
-  EXPECT_EQ(c.children()[1].data(), 2.0);
-  EXPECT_EQ(c.children()[0].children()[0].data(), a.data());
-  EXPECT_EQ(c.children()[0].children()[1].data(), b.data());
+
+  ASSERT_FALSE(c.children().empty());
+  ASSERT_EQ(c.children().size(), 2);
+  ASSERT_TRUE(c.children()[0].get().children().empty());
+  ASSERT_TRUE(c.children()[1].get().children().empty());
+
+  EXPECT_EQ(c.children()[0].get().data(), -1.0);
+  EXPECT_EQ(c.children()[1].get().data(), 1.0);
+  // EXPECT_EQ(c.children()[0].get().children()[0].get().data(), a.data());
+  // EXPECT_EQ(c.children()[0].get().children()[1].get().data(), b.data());
 }
 
 TEST(ValueTest, TopoSortEasy) {
@@ -65,33 +70,52 @@ TEST(ValueTest, TopoSortEasy) {
 
   ASSERT_FALSE(topo_order.empty());
   ASSERT_EQ(topo_order.size(), 3);
-  EXPECT_EQ(topo_order[0].data(), 0);   // c
-  EXPECT_EQ(topo_order[1].data(), 1);   // b
-  EXPECT_EQ(topo_order[2].data(), -1);  // a
+  EXPECT_EQ(topo_order[0].get().data(), 0);   // c
+  EXPECT_EQ(topo_order[1].get().data(), 1);   // b
+  EXPECT_EQ(topo_order[2].get().data(), -1);  // a
 
   topo_order = c.build_topo();
 
   ASSERT_FALSE(topo_order.empty());
   ASSERT_EQ(topo_order.size(), 3);
-  EXPECT_EQ(topo_order[0].data(), 0);  // c
-  EXPECT_EQ(topo_order[1].data(), 1);  // b
-  EXPECT_EQ(topo_order[2].data(), -1); // a
+  EXPECT_EQ(topo_order[0].get().data(), 0);  // c
+  EXPECT_EQ(topo_order[1].get().data(), 1);  // b
+  EXPECT_EQ(topo_order[2].get().data(), -1); // a
 }
 
 TEST(ValueTest, TopoSortEasy1) {
   auto a = Value{-1.0};
   auto b = Value{1.0};
   auto c = a + b;  // c'
+  printf("c addr: %p\n", &c);
   c += b;
+  printf("c addr: %p\n", &c);
 
   auto topo_order = c.build_topo();
 
   ASSERT_FALSE(topo_order.empty());
   ASSERT_EQ(topo_order.size(), 5);
 
-  EXPECT_EQ(topo_order[0].data(), 1);  // c
-  EXPECT_EQ(topo_order[1].data(), 1);  // b
-  EXPECT_EQ(topo_order[2].data(), 0);  // c'
-  EXPECT_EQ(topo_order[3].data(), 1);  // b
-  EXPECT_EQ(topo_order[4].data(), -1); // a
+  EXPECT_EQ(topo_order[0].get().data(), 1);  // c
+  EXPECT_EQ(topo_order[1].get().data(), 1);  // b
+  EXPECT_EQ(topo_order[2].get().data(), 0);  // c'
+  EXPECT_EQ(topo_order[3].get().data(), 1);  // b
+  EXPECT_EQ(topo_order[4].get().data(), -1); // a
+}
+
+TEST(ValueTest, GradSimple1) {
+  auto a = Value{-99.0f};
+  a.backward();
+  EXPECT_EQ(a.data(), -99.0);
+  EXPECT_EQ(a.grad(), 1.0);
+}
+
+TEST(ValueTest, GradSimple2) {
+  auto a = Value{-4.0f};
+  auto b = Value{2.0f};
+  auto c = a + b;
+  c.backward();
+  EXPECT_EQ(a.grad(), 1.0);
+  EXPECT_EQ(b.grad(), 1.0);
+  EXPECT_EQ(c.grad(), 1.0);
 }

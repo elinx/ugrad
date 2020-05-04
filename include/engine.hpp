@@ -2,39 +2,68 @@
 #define __UGRAD_ENGINE_HPP__
 
 #include <algorithm>
+#include <functional>
 #include <ostream>
 #include <vector>
 
 namespace ugrad {
 
 using std::ostream;
+using std::reference_wrapper;
 using std::vector;
 
-class Value {
+struct Value {
  public:
+  using ValueRef = reference_wrapper<Value>;
+
   Value(double data);
-  Value(double data, vector<Value> children);
+  Value(double data, vector<ValueRef> children);
 
   double data() const { return _data; }
   double grad() const { return _grad; }
-  const vector<Value>& children() const { return _children; }
-  void children(const vector<Value>& children) { _children = children; }
+  const vector<ValueRef>& children() const { return _children; }
+  void children(const vector<ValueRef>& children) { _children = children; }
   bool visited() { return _vis; }
   void visited(bool status) { _vis = status; }
   Value relu() { return {std::max(0.0, _data), _children}; }
+
+  Value& operator+=(const Value& rhs) {
+    auto out = Value(this->data() + rhs.data(), {*this, rhs});
+    out._backward = [&out] () {
+      out._children[0].get()._grad += out._grad;
+      out._children[1].get()._grad += out._grad;
+    };
+    *this = out;
+    return *this;
+  }
+
+  Value& operator-=(const Value& rhs) {
+    // lhs = lhs - rhs;
+    return *this;
+  }
+
+  Value& operator*=(const Value& rhs) {
+    // lhs = lhs * rhs;
+    return *this;
+  }
+
+  Value& operator/=(const Value& rhs) {
+    lhs = lhs / rhs;
+    return *this;
+  }
 
   void backward() {
     _grad = 1.0;
     auto topo_order = build_topo();
     for (auto val: topo_order) {
-      val.backward();
+      val.get()._backward();
     }
   }
 
-  vector<Value> build_topo() {
-    vector<Value> topo_order;
-    visited(false);
+  vector<ValueRef> build_topo() {
+    vector<ValueRef> topo_order;
     build_topo(topo_order);
+    clear_visit_mark(topo_order);
     return topo_order;
   }
 
@@ -43,33 +72,41 @@ class Value {
     return os;
   }
 
- private:
-  void build_topo(Value& val, vector<Value>& topo_order);
-  void build_topo(vector<Value>& topo_order) { build_topo(*this, topo_order); }
+  void build_topo(Value& val, vector<ValueRef>& topo_order);
+  void build_topo(vector<ValueRef>& topo_order) { build_topo(*this, topo_order); }
+  void clear_visit_mark(vector<ValueRef>& topo_order);
 
- private:
   double _data;
-  double _grad;
-  vector<Value> _children;
   bool _vis;
+  double _grad;
+  vector<ValueRef> _children;
+  std::function<void()> _backward;
 };
 
-inline Value operator+(const Value& lhs, const Value& rhs) {
+inline Value operator+(Value& lhs, Value& rhs) {
   auto out = Value(lhs.data() + rhs.data(), {lhs, rhs});
+  out._backward = [&out] () {
+    out._children[0].get()._grad += out._grad;
+    out._children[1].get()._grad += out._grad;
+  };
   return out;
 }
 
-inline Value operator-(const Value& lhs, const Value& rhs) {
+inline Value operator-(Value& lhs, Value& rhs) {
   auto out = Value(lhs.data() - rhs.data(), {lhs, rhs});
   return out;
 }
 
-inline Value operator*(const Value& lhs, const Value& rhs) {
+inline Value operator*(Value& lhs, Value& rhs) {
   auto out = Value(lhs.data() * rhs.data(), {lhs, rhs});
+  out._backward = [&out] () {
+    out._children[0].get()._grad += out._children[1].get().data() * out._grad;
+    out._children[1].get()._grad += out._children[0].get().data() * out._grad;
+  };
   return out;
 }
 
-inline Value operator/(const Value& lhs, const Value& rhs) {
+inline Value operator/(Value& lhs, Value& rhs) {
   auto out = Value(lhs.data() / rhs.data(), {lhs, rhs});
   return out;
 }
@@ -78,25 +115,6 @@ inline Value operator-(const Value& rhs) {
   return {-rhs.data(), rhs.children()};
 }
 
-inline Value& operator+=(Value& lhs, const Value& rhs) {
-  lhs = lhs + rhs;
-  return lhs;
-}
-
-inline Value& operator-=(Value& lhs, const Value& rhs) {
-  lhs = lhs - rhs;
-  return lhs;
-}
-
-inline Value& operator*=(Value& lhs, const Value& rhs) {
-  lhs = lhs * rhs;
-  return lhs;
-}
-
-inline Value& operator/=(Value& lhs, const Value& rhs) {
-  lhs = lhs / rhs;
-  return lhs;
-}
 
 }  // namespace ugrad
 #endif  // __UGRAD_ENGINE_HPP__
