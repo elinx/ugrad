@@ -12,8 +12,12 @@
 namespace ugrad {
 
 struct Module {
-  void zero_grad() {}
-  void parameters() {}
+  void zero_grad() {
+    for (auto p: parameters()) {
+      p->_grad = 0;
+    }
+  }
+  virtual vector<ValuePtr> parameters() { return {}; }
 };
 
 struct Neuron : public Module {

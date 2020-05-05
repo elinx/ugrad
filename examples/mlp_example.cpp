@@ -56,6 +56,48 @@ static tuple<vector<vector<ValuePtr>>, vector<vector<ValuePtr>>> read_dataset(
   return std::make_tuple(X, y);
 }
 
+static vector<vector<ValuePtr>> forward(MLP& model,
+                                        vector<vector<ValuePtr>>& inputs) {
+  vector<vector<ValuePtr>> scores;
+  for (auto input : inputs) {
+    scores.emplace_back(model(input));
+  }
+  return scores;
+}
+
+static tuple<ValuePtr, double> loss(const vector<vector<ValuePtr>>& scores,
+                                    const vector<vector<ValuePtr>> y,
+                                    const vector<ValuePtr>& parameters) {
+  vector<ValuePtr> losses;
+  for (auto i = 0; i < y.size(); ++i) {
+    losses.emplace_back(
+        (make_shared<Value>(1.0) + (-y[i][0]) * scores[i][0])->relu());
+  }
+  // svm "max-margin" loss
+  auto data_loss = make_shared<Value>(0.0);
+  for (auto loss : losses) {
+    data_loss = data_loss + loss;
+  }
+  data_loss = data_loss / make_shared<Value>(1.0 / losses.size());
+
+  // L2 regularization
+  auto alpha = make_shared<Value>(1e4);
+  auto sumv = make_shared<Value>(0.0);
+  for (auto p : parameters) {
+    sumv = sumv + p * p;
+  }
+  auto reg_loss = alpha * sumv;
+  auto total_loss = data_loss + reg_loss;
+
+  // get accuracy
+  double accuracy = 0.0;
+  for (auto i = 0; i < y.size(); ++i) {
+    accuracy += (scores[i][0]->data() > 0) == (y[i][0]->data() > 0);
+  }
+  accuracy /= y.size();
+  return std::make_tuple(total_loss, accuracy);
+}
+
 int main(int argc, char* argv[]) {
   if (argc < 3) {
     fmt::print("Usage: mlp_example X.txt y.txt\n");
@@ -69,6 +111,24 @@ int main(int argc, char* argv[]) {
   auto model = MLP(2, {16, 16, 1});
   fmt::print("model: {}\n", model);
   fmt::print("number of parameters: {}\n", model.parameters().size());
+
+  const size_t epochs = 10;
+  for (auto epoch = 0; epoch < epochs; ++epoch) {
+    auto scores = forward(model, X);
+    auto [total_loss, acc] = loss(scores, y, model.parameters());
+    fmt::print("total loss: {}, accuracy: {}\n", *total_loss, acc);
+
+    model.zero_grad();
+    total_loss->backward();
+
+    const double learning_rate = 1.0 - 0.9*epoch/100;
+    for (auto p: model.parameters()) {
+      p->_data -= learning_rate * p->grad();
+    }
+
+    fmt::print("epoch {} loss {}, accuracy {}%", epoch, total_loss->data(),
+      acc * 100);
+  }
 
   return 0;
 }
