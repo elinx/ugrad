@@ -68,6 +68,7 @@ int main(int argc, char* argv[]) {
 
   auto model = MLP(2, {16, 16, 1});
   fmt::print("model: {}\n", model);
+  fmt::print("number of parameters: {}\n", model.parameters().size());
 
   return 0;
 }

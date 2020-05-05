@@ -59,6 +59,12 @@ struct Neuron : public Module {
     return os;
   }
 
+  vector<ValuePtr> parameters() {
+    auto whole = _w;
+    whole.push_back(_b);
+    return whole;
+  }
+
   vector<ValuePtr> _w;
   ValuePtr _b;
   bool _non_linear;
@@ -98,6 +104,17 @@ struct Layer : public Module {
     return os;
   }
 
+
+  vector<ValuePtr> parameters() {
+    vector<ValuePtr> whole;
+    for (auto neuron: _neurons) {
+      for (auto param: neuron.parameters()) {
+        whole.push_back(param);
+      }
+    }
+    return whole;
+  }
+
   size_t _in_nr;
   size_t _out_nr;
   vector<Neuron> _neurons;
@@ -131,6 +148,16 @@ struct MLP : public Module {
     str += "]";
     os << str;
     return os;
+  }
+
+  vector<ValuePtr> parameters() {
+    vector<ValuePtr> whole;
+    for (auto layer: _layers) {
+      for (auto param: layer.parameters()) {
+        whole.push_back(param);
+      }
+    }
+    return whole;
   }
 
   vector<Layer> _layers;
