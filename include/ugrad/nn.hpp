@@ -4,6 +4,8 @@
 #include <initializer_list>
 #include <random>
 #include <vector>
+#include <string>
+#include <sstream>
 
 #include <ugrad/engine.hpp>
 
@@ -50,6 +52,13 @@ struct Neuron : public Module {
     return act;
   }
 
+  friend ostream& operator<<(ostream& os, const Neuron& val) {
+    auto act = "Linear";
+    if (val._non_linear) { act = "ReLU"; }
+    os << act << "Neuron(" << val._w.size() << ")";
+    return os;
+  }
+
   vector<ValuePtr> _w;
   ValuePtr _b;
   bool _non_linear;
@@ -76,6 +85,19 @@ struct Layer : public Module {
     return out;
   }
 
+  friend ostream& operator<<(ostream& os, const Layer& layer) {
+    std::string str = "Layer of[";
+    for (auto& n: layer._neurons) {
+      std::stringstream ss;
+      ss << n;
+      str += ss.str() + ", ";
+    }
+    str = str.substr(0, str.size() - 2);
+    str += "]";
+    os << str;
+    return os;
+  }
+
   size_t _in_nr;
   size_t _out_nr;
   vector<Neuron> _neurons;
@@ -96,6 +118,19 @@ struct MLP : public Module {
       x = layer(x);
     }
     return x;
+  }
+
+  friend ostream& operator<<(ostream& os, const MLP& mlp) {
+    std::string str = "MLP of[";
+    for (auto& layer: mlp._layers) {
+      std::stringstream ss;
+      ss << layer;
+      str += ss.str() + ", ";
+    }
+    str = str.substr(0, str.size() - 2);
+    str += "]";
+    os << str;
+    return os;
   }
 
   vector<Layer> _layers;
