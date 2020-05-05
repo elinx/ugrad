@@ -1,0 +1,106 @@
+#ifndef __UGRAD_NN_HPP__
+#define __UGRAD_NN_HPP__
+
+#include <initializer_list>
+#include <random>
+#include <vector>
+
+#include <ugrad/engine.hpp>
+
+namespace ugrad {
+
+struct Module {
+  void zero_grad() {}
+  void parameters() {}
+};
+
+struct Neuron : public Module {
+  Neuron(size_t in_nr, bool non_linear = true, bool is_test = false)
+      : _w{}, _b{make_shared<Value>(0.0)}, _non_linear{non_linear} {
+    fill_weights(in_nr, !is_test);
+  }
+
+  struct UniformRandomGenerator {
+    UniformRandomGenerator() : _rng(std::random_device{}()), _dist{-1.0, 1.0} {}
+    double operator()() { return _dist(_rng); }
+    std::mt19937 _rng;
+    std::uniform_real_distribution<> _dist;
+  };
+
+  void fill_weights(size_t num, bool use_random) {
+    auto gen = UniformRandomGenerator();
+    for (auto i = 0; i < num; ++i) {
+      auto val = 1.0;
+      if (use_random) {
+        val = gen();
+      }
+      _w.emplace_back(make_shared<Value>(val));
+    }
+  }
+
+  ValuePtr operator()(vector<ValuePtr> x) {
+    auto wx = make_shared<Value>(0.0);
+    for (auto i = 0; i < x.size(); ++i) {
+      wx = wx + (x[i] * _w[i]);
+    }
+    auto act = wx + _b;
+    if (_non_linear) {
+      return act->relu();
+    }
+    return act;
+  }
+
+  vector<ValuePtr> _w;
+  ValuePtr _b;
+  bool _non_linear;
+};
+
+struct Layer : public Module {
+  Layer(size_t in_nr, size_t out_nr, bool non_linear = true,
+        bool is_test = false)
+      : _in_nr{in_nr}, _out_nr{out_nr}, _neurons{} {
+    fill_neurons(non_linear, is_test);
+  }
+
+  void fill_neurons(bool non_linear, bool is_test) {
+    for (auto i = 0; i < _out_nr; ++i) {
+      _neurons.emplace_back(_in_nr, non_linear, is_test);
+    }
+  }
+
+  vector<ValuePtr> operator()(vector<ValuePtr> x) {
+    auto out = vector<ValuePtr>{};
+    for (auto neuron : _neurons) {
+      out.emplace_back(neuron(x));
+    }
+    return out;
+  }
+
+  size_t _in_nr;
+  size_t _out_nr;
+  vector<Neuron> _neurons;
+};
+
+struct MLP : public Module {
+  MLP(size_t in_nr, std::initializer_list<size_t> outs_nr, bool is_test = false) : _layers{} {
+    vector<size_t> sz(outs_nr.begin(), outs_nr.end());
+    sz.insert(sz.begin(), in_nr);
+    for (auto i = 0; i < outs_nr.size(); ++i) {
+      _layers.emplace_back(sz[i], sz[i + 1], i != (outs_nr.size() - 1),
+                           is_test);
+    }
+  }
+
+  vector<ValuePtr> operator()(vector<ValuePtr> x) {
+    for (auto layer : _layers) {
+      x = layer(x);
+    }
+    return x;
+  }
+
+  vector<Layer> _layers;
+};
+
+}  // namespace ugrad
+
+#endif  // __UGRAD_NN_HPP__
