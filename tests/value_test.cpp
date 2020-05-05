@@ -1,8 +1,8 @@
 #include <memory>
 #include <vector>
 
-#include "engine.hpp"
-#include "gtest/gtest.h"
+#include <ugrad/engine.hpp>
+#include <gtest/gtest.h>
 
 using std::make_shared;
 using std::vector;

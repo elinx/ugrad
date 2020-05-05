@@ -1,7 +1,8 @@
 #include <iostream>
-#include "fmt/core.h"
-#include "fmt/ostream.h"
-#include "engine.hpp"
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+
+#include <ugrad/engine.hpp>
 
 using namespace ugrad;
 
