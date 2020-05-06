@@ -78,10 +78,10 @@ static tuple<ValuePtr, double> loss(const vector<vector<ValuePtr>>& scores,
   for (auto loss : losses) {
     data_loss = data_loss + loss;
   }
-  data_loss = data_loss / make_shared<Value>(1.0 / losses.size());
+  data_loss = data_loss * make_shared<Value>(1.0 / losses.size());
 
   // L2 regularization
-  auto alpha = make_shared<Value>(1e4);
+  auto alpha = make_shared<Value>(1e-4);
   auto sumv = make_shared<Value>(0.0);
   for (auto p : parameters) {
     sumv = sumv + p * p;
@@ -112,22 +112,22 @@ int main(int argc, char* argv[]) {
   fmt::print("model: {}\n", model);
   fmt::print("number of parameters: {}\n", model.parameters().size());
 
-  const size_t epochs = 10;
+  const size_t epochs = 100;
   for (auto epoch = 0; epoch < epochs; ++epoch) {
     auto scores = forward(model, X);
     auto [total_loss, acc] = loss(scores, y, model.parameters());
-    fmt::print("total loss: {}, accuracy: {}\n", *total_loss, acc);
+    // fmt::print("total loss: {}, accuracy: {}\n", *total_loss, acc);
 
     model.zero_grad();
     total_loss->backward();
 
-    const double learning_rate = 1.0 - 0.9*epoch/100;
-    for (auto p: model.parameters()) {
+    const double learning_rate = 1.0 - 0.9 * epoch / 100;
+    for (auto p : model.parameters()) {
       p->_data -= learning_rate * p->grad();
     }
 
-    fmt::print("epoch {} loss {}, accuracy {}%", epoch, total_loss->data(),
-      acc * 100);
+    fmt::print("epoch {} loss {}, accuracy {:.2f}%\n", epoch, total_loss->data(),
+               acc * 100);
   }
 
   return 0;

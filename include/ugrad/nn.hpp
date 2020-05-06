@@ -45,8 +45,8 @@ struct Neuron : public Module {
   }
 
   ValuePtr operator()(vector<ValuePtr> x) {
-    auto wx = make_shared<Value>(0.0);
-    for (auto i = 0; i < x.size(); ++i) {
+    auto wx = x[0] * _w[0];
+    for (auto i = 1; i < x.size(); ++i) {
       wx = wx + (x[i] * _w[i]);
     }
     auto act = wx + _b;
