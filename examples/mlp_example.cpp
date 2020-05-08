@@ -6,6 +6,8 @@
 #include <tuple>
 #include <ugrad/engine.hpp>
 #include <ugrad/nn.hpp>
+#include <algorithm>
+#include <numeric>
 
 using std::ifstream;
 using std::tuple;
@@ -57,7 +59,7 @@ static tuple<vector<vector<ValuePtr>>, vector<vector<ValuePtr>>> read_dataset(
 }
 
 static vector<vector<ValuePtr>> forward(MLP& model,
-                                        vector<vector<ValuePtr>>& inputs) {
+                                        const vector<vector<ValuePtr>>& inputs) {
   vector<vector<ValuePtr>> scores;
   for (auto input : inputs) {
     scores.emplace_back(model(input));
@@ -70,23 +72,19 @@ static tuple<ValuePtr, double> loss(const vector<vector<ValuePtr>>& scores,
                                     const vector<ValuePtr>& parameters) {
   vector<ValuePtr> losses;
   for (auto i = 0; i < y.size(); ++i) {
+    // fmt::print("scores[{}]: {:.6f}, y[{}]: {}\n", i, scores[i][0]->data(), i, y[i][0]->data());
     losses.emplace_back(
         (make_shared<Value>(1.0) + (-y[i][0]) * scores[i][0])->relu());
   }
   // svm "max-margin" loss
-  auto data_loss = make_shared<Value>(0.0);
-  for (auto loss : losses) {
-    data_loss = data_loss + loss;
-  }
-  data_loss = data_loss * make_shared<Value>(1.0 / losses.size());
+  auto data_loss = std::accumulate(losses.begin(), losses.end(), make_shared<Value>(0.0));
+  data_loss = data_loss / make_shared<Value>(losses.size());
 
   // L2 regularization
   auto alpha = make_shared<Value>(1e-4);
-  auto sumv = make_shared<Value>(0.0);
-  for (auto p : parameters) {
-    sumv = sumv + p * p;
-  }
-  auto reg_loss = alpha * sumv;
+  auto square_sum = std::inner_product(parameters.begin(), parameters.end(),
+    parameters.begin(), make_shared<Value>(0.0));
+  auto reg_loss = alpha * square_sum;
   auto total_loss = data_loss + reg_loss;
 
   // get accuracy
@@ -121,13 +119,16 @@ int main(int argc, char* argv[]) {
     model.zero_grad();
     total_loss->backward();
 
-    const double learning_rate = 1.0 - 0.9 * epoch / 100;
+    double learning_rate = 1.0 - 0.9 * epoch / 100;
+    learning_rate = std::max(learning_rate, 0.001);
     for (auto p : model.parameters()) {
+      // fmt::print("++ p->data: {:.6f}, p->grad: {:.6f}\n", p->data(), p->grad());
       p->_data -= learning_rate * p->grad();
+      // fmt::print("-- p->data: {:.6f}, p->grad: {:.6f}\n", p->data(), p->grad());
     }
 
-    fmt::print("epoch {} loss {}, accuracy {:.2f}%\n", epoch, total_loss->data(),
-               acc * 100);
+    fmt::print("epoch {} loss {}, accuracy {:.2f}%, lr: {:.4f}\n", epoch, total_loss->data(),
+               acc * 100, learning_rate);
   }
 
   return 0;

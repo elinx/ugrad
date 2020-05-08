@@ -21,13 +21,13 @@ using ValuePtr = shared_ptr<Value>;
 struct Value : public std::enable_shared_from_this<Value> {
  public:
   Value(double data)
-      : _data(data), _grad(0.0f), _vis{false}, _backward{[]() {}} {}
+      : _data(data), _vis{false}, _grad(0.0f), _backward{[]() {}} {}
 
   Value(double data, vector<ValuePtr> children)
       : _data(data),
+        _vis{false},
         _grad(0.0f),
         _children{children},
-        _vis{false},
         _backward{[]() {}} {}
 
   double data() const { return _data; }

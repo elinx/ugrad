@@ -15,5 +15,7 @@ plt.figure(figsize=(5,5))
 plt.scatter(X[:,0], X[:,1], c=y, s=20, cmap='jet')
 plt.show()
 
+print(X)
+
 np.savetxt("make_moons_X.txt", X)
 np.savetxt("make_moons_y.txt", y)
