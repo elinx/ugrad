@@ -15,3 +15,4 @@ target_include_directories(ugrad INTERFACE include)
 
 add_subdirectory(examples)
 add_subdirectory(tests)
+add_subdirectory(python)
