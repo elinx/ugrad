@@ -128,13 +128,16 @@ struct Layer : public Module {
 };
 
 struct MLP : public Module {
-  MLP(size_t in_nr, std::initializer_list<size_t> outs_nr, bool is_test = false) : _layers{} {
+  MLP(size_t in_nr, std::vector<size_t> outs_nr, bool is_test = false) : _layers() {
     vector<size_t> sz(outs_nr.begin(), outs_nr.end());
     sz.insert(sz.begin(), in_nr);
     for (auto i = 0; i < outs_nr.size(); ++i) {
       _layers.emplace_back(sz[i], sz[i + 1], i != (outs_nr.size() - 1),
                            is_test);
     }
+  }
+  MLP(size_t in_nr, std::initializer_list<size_t> outs_nr, bool is_test = false)
+    : MLP(in_nr, std::vector<size_t>{outs_nr}, is_test) {
   }
   ~MLP() {}
 
