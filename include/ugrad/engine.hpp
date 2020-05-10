@@ -56,6 +56,11 @@ struct Value : public std::enable_shared_from_this<Value> {
     return out;
   }
 
+  ValuePtr pow(double exp) {
+    auto rhs = make_shared<Value>(exp);
+    return pow(rhs);
+  }
+
   void backward() {
     _grad = 1.0;
     auto topo_order = build_topo();
@@ -113,6 +118,11 @@ inline ValuePtr operator+(ValuePtr lhs, ValuePtr rhs) {
   return out;
 }
 
+inline ValuePtr operator+(ValuePtr lhs, double val) {
+  auto rhs = make_shared<Value>(val);
+  return lhs + rhs;
+}
+
 inline ValuePtr operator*(ValuePtr lhs, ValuePtr rhs) {
   auto out =
       make_shared<Value>(lhs->data() * rhs->data(), vector<ValuePtr>{lhs, rhs});
@@ -123,6 +133,16 @@ inline ValuePtr operator*(ValuePtr lhs, ValuePtr rhs) {
   return out;
 }
 
+inline ValuePtr operator*(ValuePtr lhs, double val) {
+  auto rhs = make_shared<Value>(val);
+  return lhs * rhs;
+}
+
+inline ValuePtr operator*(double val, ValuePtr rhs) {
+  auto lhs = make_shared<Value>(val);
+  return lhs * rhs;
+}
+
 inline ValuePtr operator-(ValuePtr rhs) {
   return rhs * make_shared<Value>(-1.0);
 }
@@ -131,6 +151,16 @@ inline ValuePtr operator-(ValuePtr lhs, ValuePtr rhs) { return lhs + (-rhs); }
 
 inline ValuePtr operator/(ValuePtr lhs, ValuePtr rhs) {
   return lhs * rhs->pow(make_shared<Value>(-1));
+}
+
+inline ValuePtr operator/(ValuePtr lhs, double val) {
+  auto rhs = make_shared<Value>(val);
+  return lhs / rhs;
+}
+
+inline ValuePtr operator/(double val, ValuePtr rhs) {
+  auto lhs = make_shared<Value>(val);
+  return lhs / rhs;
 }
 
 }  // namespace ugrad
