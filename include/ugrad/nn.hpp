@@ -12,6 +12,7 @@
 namespace ugrad {
 
 struct Module {
+  virtual ~Module() {}
   void zero_grad() {
     for (auto p: parameters()) {
       p->_grad = 0;
@@ -25,6 +26,7 @@ struct Neuron : public Module {
       : _w{}, _b{make_shared<Value>(0.0)}, _non_linear{non_linear} {
     fill_weights(in_nr, !is_test);
   }
+  ~Neuron() {}
 
   struct UniformRandomGenerator {
     UniformRandomGenerator() : _rng(std::random_device{}()), _dist{-1.0, 1.0} {}
@@ -80,6 +82,7 @@ struct Layer : public Module {
       : _in_nr{in_nr}, _out_nr{out_nr}, _neurons{} {
     fill_neurons(non_linear, is_test);
   }
+  ~Layer() {}
 
   void fill_neurons(bool non_linear, bool is_test) {
     for (auto i = 0; i < _out_nr; ++i) {
@@ -133,6 +136,7 @@ struct MLP : public Module {
                            is_test);
     }
   }
+  ~MLP() {}
 
   vector<ValuePtr> operator()(vector<ValuePtr> x) {
     for (auto layer : _layers) {
