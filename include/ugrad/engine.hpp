@@ -31,7 +31,9 @@ struct Value : public std::enable_shared_from_this<Value> {
         _backward{[]() {}} {}
 
   double data() const { return _data; }
+  void set_data(double data) { _data = data; }
   double grad() const { return _grad; }
+  void set_grad(double grad) { _grad = grad; }
   const vector<ValuePtr>& children() const { return _children; }
   void children(const vector<ValuePtr>& children) { _children = children; }
   bool visited() { return _vis; }
